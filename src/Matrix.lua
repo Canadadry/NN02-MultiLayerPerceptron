@@ -85,6 +85,18 @@ function Matrix:print()
 	print()
 end
 
+function Matrix:map(fn)
+	assert(self:is_a(Matrix),"Arg 1 must be a matrix")
+	assert(type(fn)=='function',"Arg 2 must be a function")
+	for i = 1, self:rows() do
+		for j = 1,self:columns() do
+			self.mtx[i][j] = fn(self.mtx[i][j]) 
+		end
+		print(str);
+	end
+	print()
+end
+
 function Matrix.fromVector( vec )
 	assert(type(vec)=="table","Arg 1 must be a table")
 	local m = Matrix(#vec)
