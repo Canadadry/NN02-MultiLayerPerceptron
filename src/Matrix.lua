@@ -93,6 +93,7 @@ function Matrix:map(fn)
 			self.mtx[i][j] = fn(self.mtx[i][j]) 
 		end
 	end
+	return self
 end
 
 function Matrix.fromVector( vec )
@@ -122,7 +123,7 @@ function Matrix.sub( m1, m2 )
 	assert(m2.is_a and m2:is_a(Matrix),"Arg 2 must be a matrix")
 	assert(m1:size() == m2:size(), "matrix dont have the same size")
 	local m = Matrix(m1:size())
-	for i = 1, m1:row() do
+	for i = 1, m1:rows() do
 		for j = 1,m1:columns() do
 			m.mtx[i][j] = m1.mtx[i][j] - m2.mtx[i][j]
 		end
@@ -148,6 +149,21 @@ function Matrix.mul( m1, m2 )
 	return m
 end
 
+
+function Matrix.hadamard_mul( m1, m2 )
+	assert(m1.is_a and m1:is_a(Matrix),"Arg 1 must be a matrix")
+	assert(m2.is_a and m2:is_a(Matrix),"Arg 2 must be a matrix")
+	assert(m1:size() == m2:size(), "matrix dont have the same size")
+	local m = Matrix(m1:size())
+	for i = 1, m1:rows() do
+		for j = 1,m1:columns() do
+			m.mtx[i][j] = m1.mtx[i][j] * m2.mtx[i][j]
+		end
+	end
+	return m
+end
+
+
 function Matrix.mulnum( m1, num )
 	assert(m1.is_a and m1:is_a(Matrix),"Arg 1 must be a matrix")
 	assert(type(num)=='number',"Arg 2 must be a number")
@@ -165,7 +181,7 @@ function Matrix.__add( ... )
 end
 
 function Matrix.__sub( ... )
-	return Matrix.__sub( ... )
+	return Matrix.sub( ... )
 end
 
 function Matrix.__unm( ... )

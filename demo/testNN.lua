@@ -6,3 +6,5 @@ math.randomseed( os.time() )
 nn = NeuralNetwork(2,2,1)
 
 nn:feed({1,1}):print()
+
+nn:train({1,1},{1})
