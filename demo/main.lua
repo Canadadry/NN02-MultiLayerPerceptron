@@ -1,6 +1,6 @@
 package.path = package.path .. ";../src/?.lua"
 require "NeuralNetwork"
-
+require "serialize"
 
 function love.load(arg)
 	math.randomseed( os.time() )
@@ -42,6 +42,18 @@ function love.update(dt)
 			local data = dataset[math.random(1,4)]
 			nn:train(data.input,data.output)
 		end
+		for i,v in ipairs(testValue) do
+			v.guess = nn:feed({v.i,v.j})
+		end
+	end
+end
+
+function love.keypressed( key, scancode, isrepeat )
+	if key == 's' and isrepeat == false then
+		nn:serialize('save_nn.lua')
+	end
+	if key == 'r' and isrepeat == false then
+		nn = NeuralNetwork.deserialize('save_nn.lua')
 		for i,v in ipairs(testValue) do
 			v.guess = nn:feed({v.i,v.j})
 		end

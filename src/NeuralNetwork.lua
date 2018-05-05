@@ -1,5 +1,6 @@
 require "Class"
 require "Matrix"
+require "serialize"
 
 NeuralNetwork = class()
 
@@ -65,6 +66,21 @@ function NeuralNetwork:train(input,target)
 
 	self.layer_i_h = self.layer_i_h + weight_ih_delta
 
+end
+
+
+function NeuralNetwork:serialize(filename)
+	return table.save(self,filename)
+end
+
+function NeuralNetwork.deserialize(filename)
+	local data  =  table.load(filename)
+	local nn = NeuralNetwork(1,1,1)
+	nn.layer_i_h.mtx = data.layer_i_h.mtx
+	nn.layer_h_o.mtx = data.layer_h_o.mtx
+	nn.bias_h.mtx = data.bias_h.mtx
+	nn.bias_o.mtx = data.bias_o.mtx
+	return nn
 end
 
 function NeuralNetwork.sigmoid(x)
