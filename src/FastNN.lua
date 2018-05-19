@@ -17,80 +17,90 @@ function FastNN:init(input,hidden,output)
 	self.bias_o:map(FastNN.randomize)
 
 	self.learningRate = 1.0
+
+	self.input  = Matrix.new(input,1,0)
+	self.hidden = Matrix.new(hidden,1,0)
+	self.output = Matrix.new(output,1,0)
+	self.target = Matrix.new(output,1,0)
+
+	self.output_err = Matrix.new(output,1,0)
+	self.hidden_err = Matrix.new(hidden,1,0)
+
+	self.layer_h_o_t = Matrix.new(hidden,output,0)
+	self.gradient = Matrix.new(output,1,0)
+
+	self.hidden_t = Matrix.new(1,hidden,0)
+	self.weight_ho_delta = Matrix.new(output,hidden,0)
+	self.hidden_gradient = Matrix.new(hidden,1,0)
+	self.input_t = Matrix.new(1,input,0)
+	self.weight_ih_delta = Matrix.new(hidden,input,0)
+
 end
 
-function FastNN.vec2mat(vector)
-	local m = Matrix.new(#vector,1,0)
-	m:map(function (i,j,v) return vector[(i+1)*(j+1)] end)
-	return m
+function FastNN.loadVector(matrix,vector)
+	matrix:map(function (i,j,v) return vector[(i+1)*(j+1)] end)
 end
 
 function FastNN:feed( input )
 	if type(input) ~= 'userdata' or input.__name ~= "MatrixeMetatableName" then
-		if( type(input) ==  'table') then
-			input =  FastNN.vec2mat(input)
+		if( type(input) ==  'table' and #input == self.input:rows()) then
+			self.loadVector(self.input,input)
 		else
 			return 
 		end
 	end
 
+	Matrix.mul(self.layer_i_h,self.input,self.hidden)
+	Matrix.add(self.hidden,self.bias_h)
+	Matrix.map(self.hidden,FastNN.sigmoid)
 
-	self.last_hidden = self.layer_i_h:mul(input):add(self.bias_h)
-	self.last_hidden:map(FastNN.sigmoid)
-
-	local output = self.layer_h_o:mul(self.last_hidden):add(self.bias_o)
-	output:map(FastNN.sigmoid)
-
-	collectgarbage()
+	Matrix.mul(self.layer_h_o,self.hidden,self.output)
+	Matrix.add(self.output,self.bias_o)
+	Matrix.map(self.output,FastNN.sigmoid)
 	
-	return output
+	return self.output
 end
 
 function FastNN:train(input,target)
 
-	if type(input) ~= 'userdata' or input.__name ~= "MatrixeMetatableName" then
-		if( type(input) ==  'table') then
-			input =  FastNN.vec2mat(input)
-		else
-			return 
-		end
-	end
-
 	if type(target) ~= 'userdata' or target.__name ~= "MatrixeMetatableName" then
-		if( type(target) ==  'table') then
-			target =  FastNN.vec2mat(target)
+		if type(target) ==  'table' and #target == self.target:rows() then
+			FastNN.loadVector(self.target,target)
 		else
 			return 
 		end
 	end
 
-	local output = self:feed(input)
-	local output_err = target:sub(output)
-	local hiddent_err = self.layer_h_o:transpose():mul(output_err)
-	local gradient = output:copy()
-	gradient:map(FastNN.sigmoid_derivative)
-	gradient = gradient:hadamard_mul(output_err):mulnum(self.learningRate)
+	self:feed(input)
+	Matrix.copy(self.target,self.output_err)
+	Matrix.sub(self.output_err,self.output)
 
-	self.bias_o = self.bias_o:add(gradient)
+	Matrix.transpose(self.layer_h_o,self.layer_h_o_t)
+	Matrix.mul(self.layer_h_o_t,self.output_err,self.hidden_err)
 
-	local hidden_t = self.last_hidden:transpose()
-	local weight_ho_delta = gradient:mul(hidden_t)
+	Matrix.copy(self.output,self.gradient)
+	Matrix.map(self.gradient,FastNN.sigmoid_derivative)
+	Matrix.hadamard_mul(self.gradient,self.output_err)
+	Matrix.mulnum(self.gradient,self.learningRate)
 
-	self.layer_h_o = self.layer_h_o:add(weight_ho_delta)
+	Matrix.add(self.bias_o,self.gradient)
 
-	-- hidden gradient
-	local hidden_gradient = self.last_hidden:copy()
-	hidden_gradient:map(FastNN.sigmoid_derivative)
-	hidden_gradient = hidden_gradient:hadamard_mul(hiddent_err):mulnum(self.learningRate)
+	Matrix.transpose(self.hidden,self.hidden_t)
+	Matrix.mul(self.gradient,self.hidden_t,self.weight_ho_delta)
 
-	self.bias_h = self.bias_h:add(hidden_gradient)
+	Matrix.add(self.layer_h_o,self.weight_ho_delta)
 
-	local input_t = input:transpose()
-	local weight_ih_delta = hidden_gradient:mul(input_t)
+	Matrix.copy(self.hidden,self.hidden_gradient)
+	Matrix.map(self.hidden_gradient,FastNN.sigmoid_derivative)
+	Matrix.hadamard_mul(self.hidden_gradient,self.hidden_err)
+	Matrix.mulnum(self.hidden_gradient,self.learningRate)
 
-	self.layer_i_h = self.layer_i_h:add(weight_ih_delta)
+	Matrix.add(self.bias_h,self.hidden_gradient)
 
-	collectgarbage()
+	Matrix.transpose(self.input,self.input_t)
+	Matrix.mul(self.hidden_gradient,self.input_t,self.weight_ih_delta)
+
+	Matrix.add(self.layer_i_h,self.weight_ih_delta)
 end
 
 
